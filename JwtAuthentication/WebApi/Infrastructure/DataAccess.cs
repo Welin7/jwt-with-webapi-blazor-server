@@ -43,5 +43,48 @@ namespace WebApi.Infrastructure
             var sql = "SELECT * FROM [UserAccount] WHERE [Email] = @email";
             return connection.QueryFirstOrDefault<UserAccount>(sql, new { email = email });
         }
+
+        public bool InsertRefreshToken(RefreshToken refreshToken, string email)
+        {
+            var sql = "INSERT INTO [RefreshToken] (Token, CreatedDate, Expires, Enabled, Email) VALUES (@token, @createddate, @expires, @enabled, @email)";
+
+            var result = connection.Execute(sql, new
+            {
+                refreshToken.Token,
+                refreshToken.CreateDate,
+                refreshToken.Expires,
+                refreshToken.Enabled,
+                email
+            });
+
+            return result > 0;
+        }
+
+        public bool DisabelUserTokenByEmail(string email)
+        {
+            var sql = "UPDATE [REFRESHTOKEN] SET [Enabled] = 0 WHERE [EMAIL] = @email";
+            var result = connection.Execute(sql, new {email});
+            return result > 0;
+        }
+
+        public bool DisabelUserToken(string token)
+        {
+            var sql = "UPDATE [REFRESHTOKEN] SET [Enabled] = 0 WHERE [TOKEN] = @token";
+            var result = connection.Execute(sql, new { token });
+            return result > 0;
+        }
+
+        public bool IsRefreshTokenValid(string token)
+        {
+            var sql = "SELECT COUNT(1) FROM RefreshToken  WHERE [TOKEN] = @token AND [Enabled] = 1 AND [Expires] >= CAST(GETDATE() AS DATE)";
+            var result = connection.ExecuteScalar<int>(sql, new { token });
+            return result > 0;
+        }
+
+        public UserAccount? FindUserByToken(string token)
+        {
+            var sql = "SELECT [UserAccount].*  FROM [RefreshToken] JOIN [UserAccount] ON [RefreshToken].Email = [UserAccount].Email WHERE [Token] = @token";
+            return connection.QueryFirstOrDefault<UserAccount>(sql, new { token });
+        }
     }
 }
